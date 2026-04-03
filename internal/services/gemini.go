@@ -64,6 +64,10 @@ func (g *GeminiService) Summarize(ctx context.Context, content string) (*models.
 		nil,
 	)
 	if err != nil {
+		if strings.Contains(err.Error(), "429") ||
+			strings.Contains(err.Error(), "RESOURCE_EXHAUSTED") {
+			return nil, fmt.Errorf("rate limit reached — please wait a moment and try again")
+		}
 		return nil, fmt.Errorf("gemini generate content failed: %w", err)
 	}
 

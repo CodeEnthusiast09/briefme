@@ -72,12 +72,13 @@ func (h *SummarizeHandler) handleURL(c *gin.Context, rawURL string) {
 	// Send to Gemini for structured summarization.
 	summary, err := h.gemini.Summarize(c.Request.Context(), content)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("summarization failed: %s", err.Error()),
-		})
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "rate limit") {
+			status = http.StatusTooManyRequests // 429
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
-
 	summary.Sources = []models.Source{
 		{
 			Title: summary.Title,
@@ -104,9 +105,11 @@ func (h *SummarizeHandler) handleTopic(c *gin.Context, topic string) {
 	// Send the combined article content to Gemini.
 	summary, err := h.gemini.Summarize(c.Request.Context(), combinedContent)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("summarization failed: %s", err.Error()),
-		})
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "rate limit") {
+			status = http.StatusTooManyRequests // 429
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
 
