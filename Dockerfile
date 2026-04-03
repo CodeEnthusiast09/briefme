@@ -26,7 +26,7 @@ WORKDIR /app
 
 COPY --from=builder /app/server .
 
-EXPOSE 3000
+EXPOSE 4000
 
 # No entrypoint.sh needed — nothing to do before the app starts
 CMD ["/app/server"]
