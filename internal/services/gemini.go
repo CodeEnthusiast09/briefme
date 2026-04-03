@@ -137,36 +137,3 @@ func (g *GeminiService) Chat(ctx context.Context, message string, history []mode
 
 	return reply, nil
 }
-
-func (g *GeminiService) ExtractKeywords(ctx context.Context, query string) (string, error) {
-	prompt := fmt.Sprintf(
-		`Extract 2-3 concise news search keywords from the following question.
-    Focus on the subject matter only — the country, person, company, or event being asked about.
-    Strip question words (what, how, why, when, is, are) and vague words (happening, going on, situation, latest).
-    Return ONLY the keywords as a single line of plain text. No explanation, no punctuation, no quotes.
-
-    Examples:
-    "what is happening in Nigeria?" → "Nigeria news"
-    "how is the tech industry doing?" → "tech industry"
-    "tell me about the war in Sudan" → "Sudan war"
-
-    Question: %s`,
-		query,
-	)
-	result, err := g.client.Models.GenerateContent(
-		ctx,
-		g.model,
-		genai.Text(prompt),
-		nil,
-	)
-	if err != nil {
-		return "", fmt.Errorf("gemini keyword extraction failed: %w", err)
-	}
-
-	keywords := strings.TrimSpace(result.Text())
-	if keywords == "" {
-		return query, nil
-	}
-
-	return keywords, nil
-}

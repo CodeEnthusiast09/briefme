@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/CodeEnthusiast09/briefme-backend/internal/models"
 	"github.com/CodeEnthusiast09/briefme-backend/internal/services"
@@ -89,10 +90,7 @@ func (h *SummarizeHandler) handleURL(c *gin.Context, rawURL string) {
 
 func (h *SummarizeHandler) handleTopic(c *gin.Context, topic string) {
 	// Ask Gemini to extract clean search keywords from the user's query.
-	keywords, err := h.gemini.ExtractKeywords(c.Request.Context(), topic)
-	if err != nil {
-		keywords = topic
-	}
+	keywords := cleanTopic(topic)
 
 	// Fetch articles from NewsAPI using the extracted keywords.
 	combinedContent, rawSources, err := h.news.FetchArticles(keywords)
@@ -123,4 +121,40 @@ func (h *SummarizeHandler) handleTopic(c *gin.Context, topic string) {
 	summary.Sources = sources
 
 	c.JSON(http.StatusOK, summary)
+}
+
+// cleanTopic does basic keyword extraction without an LLM call.
+// It strips question words and punctuation, leaving the core subject.
+func cleanTopic(topic string) string {
+	// Remove punctuation
+	cleaned := strings.NewReplacer(
+		"?", "",
+		"!", "",
+		".", "",
+		",", "",
+	).Replace(topic)
+
+	// Strip common question/filler words
+	stopWords := map[string]bool{
+		"what": true, "is": true, "are": true, "was": true,
+		"were": true, "how": true, "why": true, "when": true,
+		"who": true, "where": true, "happening": true, "going": true,
+		"on": true, "the": true, "a": true, "an": true,
+		"in": true, "tell": true, "me": true, "about": true,
+		"latest": true, "news": true, "situation": true,
+	}
+
+	words := strings.Fields(cleaned)
+	keywords := make([]string, 0, len(words))
+	for _, word := range words {
+		if !stopWords[strings.ToLower(word)] {
+			keywords = append(keywords, word)
+		}
+	}
+
+	result := strings.Join(keywords, " ")
+	if result == "" {
+		return topic // nothing left after stripping, use original
+	}
+	return result
 }
